@@ -26,3 +26,14 @@
         cache-size 20000
         cached-map (CachedMap. backing-map cache-size)]
     (mk-map-state state-type cached-map)))
+
+(t/defstatefactory
+  instrumented-cql-state-factory
+  {:params [keyspace table backing-hof cache-size state-type prefix-name bucket-size]}
+  [conf metrics partition-index num-partitions]
+  (let [hambo-config (get conf conf/HAMBO-CONFIGURATION-KEY)
+        conn (cc/connect (s/split (get hambo-config conf/HAMBO-HOSTS) #",") {:keyspace keyspace})
+        instrumented-map (backing-hof conn table)
+        _ (.registerMetrics instrumented-map conf metrics prefix-name (int bucket-size))
+        cached-map (CachedMap. instrumented-map cache-size)]
+    (mk-map-state state-type cached-map)))
